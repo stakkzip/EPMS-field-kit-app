@@ -5,145 +5,52 @@
   {
    "id": "rtu",
    "title": "No comms on Modbus RTU (RS-485)",
-   "summary": "Device doesn't answer on a serial line: timeouts, CRC errors, or one device dropping out.",
+   "summary": "Device doesn't answer on a serial line. Check wiring, then settings, then test with ModScan.",
    "sections": [
-    {
-     "title": "Before you start",
-     "steps": [
-      {
-       "text": "Work on comms wiring inside energized gear only as a qualified person with the right PPE, and follow site LOTO.",
-       "safety": true
-      },
-      {
-       "text": "Write down what you see: which devices fail, all or one, timeouts or CRC errors, and when it started.",
-       "detail": "One device failing points to that device's settings or its wiring. Every device failing points to the master, the trunk wiring, termination or the serial settings."
-      },
-      {
-       "text": "Confirm the device is powered and healthy: display on, no fault or alarm LED.",
-       "lookup": "led status fault"
-      }
-     ]
-    },
     {
      "title": "Wiring",
      "steps": [
       {
-       "text": "Check polarity: D+ to D+ and D- to D- on every device.",
+       "text": "Work inside energized gear only as a qualified person with the right PPE, and follow site LOTO.",
+       "safety": true
+      },
+      {
+       "text": "Check polarity: D+ to D+ and D- to D- at every device.",
        "detail": "Manufacturers label these differently (A/B, D0/D1, +/-, and some swap what A and B mean). If one device won't answer and everything else checks out, swap its two data wires as a test.",
        "lookup": "rs485 wiring terminal"
       },
       {
-       "text": "Connect the common or reference terminal (GND, SC, COM, 0V) where the device has one.",
-       "detail": "Without a common reference, devices on different power sources can sit outside the receiver's voltage range and drop messages."
+       "text": "Check the line is daisy-chained: in and out of each device in one continuous run, with no stars or branches.",
+       "lookup": "daisy chain rs485 wiring"
       },
       {
-       "text": "Ground the cable shield at one end only, usually at the master.",
-       "detail": "Grounding at both ends can carry ground-loop current on the shield and add noise."
-      },
-      {
-       "text": "Make sure the line is a daisy chain: in and out of each device, no star or long stub runs.",
-       "detail": "RS-485 is designed for one continuous run. Stars and stubs cause reflections that corrupt messages, especially at higher baud rates."
-      },
-      {
-       "text": "Check length and device count: up to about 1,200 m (4,000 ft) total at lower baud rates, and up to 32 standard unit loads per segment without a repeater.",
-       "detail": "Longer runs or more devices need a lower baud rate or a repeater. Check each device's unit-load rating; some count as 1/4 or 1/8 load."
-      },
-      {
-       "text": "Use twisted-pair cable rated for RS-485 (about 120 Ω), with the two data wires on the same twisted pair."
+       "text": "Check continuity with a meter, with the cable disconnected from the devices.",
+       "detail": "Each conductor (D+, D- and common if used) should beep through end to end. There should be no continuity between D+ and D-, or from either one to the shield or ground. A short or open shows up here before anything else."
       }
      ]
     },
     {
-     "title": "Termination and biasing",
+     "title": "Settings",
      "steps": [
       {
-       "text": "Fit a 120 Ω termination at the two physical ends of the line only, and none in the middle.",
-       "detail": "Many devices have a built-in terminator switch or jumper. A terminator turned on at a mid-line device is a common cause of errors.",
-       "lookup": "termination resistor rs485"
-      },
-      {
-       "text": "Make sure biasing (fail-safe) is applied once on the line, usually at the master or gateway.",
-       "detail": "Biasing holds the idle line in a known state. With none, receivers can see noise as data; with too many devices biasing, the line can be loaded down.",
-       "lookup": "bias resistor"
-      },
-      {
-       "text": "Measure with power off: resistance between D+ and D- should read about 60 Ω.",
-       "detail": "About 60 Ω means both 120 Ω terminators are in place. About 120 Ω means one is missing. Much lower than 60 Ω means extra terminators or a short. Very high means no termination or an open circuit."
-      },
-      {
-       "text": "Measure with power on and the line idle: voltage between D+ and D- should be at least 200 mV.",
-       "detail": "Below about 200 mV at idle the line isn't biased and receivers may read garbage. A reading that's the wrong polarity can mean swapped wires."
-      }
-     ]
-    },
-    {
-     "title": "Device settings",
-     "steps": [
-      {
-       "text": "Check the Modbus address is unique on this line, between 1 and 247, and matches what the master polls.",
-       "detail": "Two devices with the same address on one line will collide and both look broken. Use the client's point list for the correct address.",
+       "text": "Check the Modbus address ID: unique on the line, between 1 and 247, and matching what the master polls.",
+       "detail": "Two devices with the same address on one line will both look broken. Use the client's point list for the correct address.",
        "lookup": "modbus address"
       },
       {
-       "text": "Check baud rate, parity and stop bits match on every device and the master.",
-       "detail": "For example 19200 8-E-1 versus 19200 8-N-1. A single mismatched device usually shows CRC errors or no answer.",
-       "lookup": "baud rate parity stop bits"
-      },
-      {
-       "text": "Confirm the port's protocol is set to Modbus RTU, not ASCII or another protocol, and that the port is enabled.",
-       "lookup": "protocol rs485 port"
-      },
-      {
-       "text": "If you changed settings, save or apply them, and power-cycle the device if its manual says changes take effect after a restart.",
-       "lookup": "save settings restart"
+       "text": "Check baud rate and parity (and stop bits) match the master and every other device on the line.",
+       "detail": "For example 19200 8-E-1 versus 19200 8-N-1. One mismatched device usually doesn't answer at all.",
+       "lookup": "baud rate parity"
       }
      ]
     },
     {
-     "title": "Isolate the problem",
+     "title": "Test with ModScan",
      "steps": [
       {
-       "text": "Watch the device's TX/RX lights while the master polls.",
-       "detail": "RX blinking but no TX: the device hears the line but isn't answering, usually address or serial settings. No RX at all: wiring, polarity or the master isn't polling this port.",
-       "lookup": "led tx rx communication"
-      },
-      {
-       "text": "Test the device alone: disconnect it from the line and poll it directly from a laptop with ModScan and a USB-to-RS-485 adapter.",
-       "detail": "If it answers on its own, the device is fine and the problem is the line: wiring, termination, a duplicate address or another device. If it doesn't, the problem is the device's settings or hardware."
-      },
-      {
-       "text": "Split the line in half and test each half to find the device or section causing trouble.",
-       "detail": "One bad transceiver or a short anywhere on the line can take down every device on it."
-      },
-      {
-       "text": "On the master or gateway, check the response timeout and the delay between polls.",
-       "detail": "Slow devices or long lines need more time to answer. If timeouts are random, try a longer timeout before changing anything else."
-      }
-     ]
-    },
-    {
-     "title": "What the errors mean",
-     "steps": [
-      {
-       "text": "Timeout or no response: the device never answered.",
-       "detail": "Wiring, polarity, wrong address, wrong baud or parity, or the device is off or faulted."
-      },
-      {
-       "text": "CRC or framing errors: the device answered but the message was garbled.",
-       "detail": "Baud or parity mismatch, missing or extra termination, no biasing, noise, or a star or stub in the wiring."
-      },
-      {
-       "text": "Exception 01, illegal function: the device doesn't support the function code being used.",
-       "detail": "For example, reading input registers (04) from a device that only has holding registers (03)."
-      },
-      {
-       "text": "Exception 02, illegal data address: the register asked for doesn't exist on this device.",
-       "detail": "Often an off-by-one register offset or the wrong register map. See the 'readings are wrong' guide.",
+       "text": "Connect ModScan straight to the device with a USB-to-RS-485 adapter, using the device's baud rate and parity, and poll its address.",
+       "detail": "Read a register you can check against the device's display. Answers: the device is fine, so the problem is the line or the master. No answer: recheck the device's address, baud and parity, then polarity at the adapter.",
        "lookup": "modbus register map"
-      },
-      {
-       "text": "Exception 03, illegal data value: a value or the number of registers requested isn't allowed.",
-       "detail": "For example, asking for more registers than the device allows in one read."
       }
      ]
     }
