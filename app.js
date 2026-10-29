@@ -12,6 +12,7 @@ const DAY = 864e5;
 let LIB = null, FW = null, worker = null, workerReady = false, reqId = 0;
 let saved = new Map();                                   // file -> sha of the copy on this phone
 let savedDevices = new Set(store.get("savedDevices", []));
+let keepAll = store.get("keepAll", false);      // "Save all" was tapped: also save manuals added later
 let busy = false;
 
 /* ---------- helpers ---------- */
@@ -59,6 +60,14 @@ function renderSync() {
 }
 setInterval(renderSync, 60000);
 window.addEventListener("online", () => { renderSync(); sync(false); });
+let lastCheck = 0;
+function checkForUpdates(minMinutes) {
+  if (!navigator.onLine || Date.now() - lastCheck < minMinutes * 60000) return;
+  lastCheck = Date.now(); sync(false);
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { renderSync(); checkForUpdates(15); } });
+window.addEventListener("pageshow", (e) => { if (e.persisted) checkForUpdates(15); });
+setInterval(() => { if (document.visibilityState === "visible") checkForUpdates(30); }, 5 * 60000);
 window.addEventListener("offline", renderSync);
 $("#syncBtn").onclick = () => sync(true);
 
@@ -79,7 +88,7 @@ function renderBanners() {
   $("#banners").innerHTML = out.join("");
   $("#banners").querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
     const a = b.dataset.act;
-    if (a === "saveall") saveDevices(LIB.devices.map(d => d.id));
+    if (a === "saveall") saveAllManuals();
     if (a === "pick") show("library");
     if (a === "update") saveDevices([...savedDevices]);
   });
@@ -131,6 +140,7 @@ async function saveDevices(ids) {
 }
 async function removeDevices(ids) {
   if (busy) return;
+  if (keepAll) { keepAll = false; store.set("keepAll", false); }   // removing anything ends "keep everything"
   const c = await caches.open(MANUALS_CACHE);
   for (const id of ids) {
     savedDevices.delete(id);
@@ -139,7 +149,8 @@ async function removeDevices(ids) {
   store.set("savedDevices", [...savedDevices]); store.set("savedManuals", Object.fromEntries(saved));
   renderLibrary(); renderBanners(); rerunSearch();
 }
-$("#saveAll").onclick = () => saveDevices(LIB.devices.map(d => d.id));
+function saveAllManuals() { keepAll = true; store.set("keepAll", true); saveDevices(LIB.devices.map(d => d.id)); }
+$("#saveAll").onclick = saveAllManuals;
 let removeArmed = 0;
 $("#removeAll").onclick = () => {
   if (Date.now() - removeArmed > 4000) { removeArmed = Date.now(); toast("Tap Remove all again to delete every saved manual from this phone."); return; }
@@ -152,7 +163,7 @@ function renderLibrary() {
   const total = all.reduce((a, x) => a + (x.bytes || 0), 0);
   const have = all.filter(x => saved.has(x.file)), haveB = have.reduce((a, x) => a + (x.bytes || 0), 0);
   $("#libSummary").innerHTML = `<b>${have.length} of ${all.length}</b> manuals saved · ${fmtMB(haveB)} of ${fmtMB(total)}`;
-  $("#libVersion").textContent = "Library " + fmtDate(LIB.built);
+  $("#libVersion").textContent = "Library " + fmtDate(LIB.built) + (keepAll ? " · new manuals save automatically" : "");
   $("#libMeter").style.width = (total ? haveB / total * 100 : 0) + "%";
   $("#saveAll").disabled = busy || have.length === all.length; $("#removeAll").disabled = busy || !have.length;
   const label = { saved: "Saved", part: "Partly saved", none: "Not saved", update: "Update ready", empty: "No manuals" };
@@ -385,7 +396,7 @@ function renderFirmware() {
 /* ---------- sync ---------- */
 let syncing = false;
 async function sync(manual) {
-  if (syncing) return; syncing = true; $("#syncBtn").disabled = true; $("#syncBtn").textContent = "Syncing…";
+  if (syncing) return; syncing = true; lastCheck = Date.now(); $("#syncBtn").disabled = true; $("#syncBtn").textContent = "Syncing…";
   let gotNetwork = false;
   try {
     const lib = await getJSON("data/library.json");
@@ -395,11 +406,14 @@ async function sync(manual) {
     if (LIB.version !== oldVersion || !worker) {
       startWorker();
       store.set("libVersion", LIB.version);
-      if (oldVersion && gotNetwork) {
-        toast("Library updated");
-        const changed = [...savedDevices].filter(id => ["update", "part"].includes(devState(devById(id) || { docs: [] })));
-        if (changed.length) saveDevices(changed);   // refresh saved manuals that changed
-      }
+      if (oldVersion && gotNetwork) toast("Library updated");
+    }
+    if (gotNetwork) {
+      // Bring the phone up to date: new or changed manuals for saved devices, and with "Save all"
+      // on, every device, including ones added since. Also retries downloads that failed before.
+      const wanted = keepAll ? LIB.devices.map(d => d.id) : [...savedDevices];
+      const todo = wanted.filter(id => ["update", "part", ...(keepAll ? ["none"] : [])].includes(devState(devById(id) || { docs: [] })));
+      if (todo.length) setTimeout(() => saveDevices(todo), 0);
     }
   } catch (e) {
     if (!LIB) $("#results").innerHTML = `<div class="empty">The library isn't on this phone yet. Open the app once with signal or Wi-Fi.</div>`;
