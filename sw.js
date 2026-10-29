@@ -4,7 +4,7 @@
      timeout, fall back to the phone's copy. Responses served from the phone carry X-From-Cache: 1.
    - Manuals: served from the phone when saved, otherwise from the internet. The app decides what
      gets saved (cache "manuals"). */
-const SHELL_VERSION = "shell-94e34407cd";
+const SHELL_VERSION = "shell-beaec88203";
 const DATA_CACHE = "data";
 const MANUALS_CACHE = "manuals";
 const VENDOR_CACHE = "vendor-v1";
@@ -41,7 +41,7 @@ self.addEventListener("install", (e) => {
     await c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })));
     // Seed library data so search works on first offline open.
     const d = await caches.open(DATA_CACHE);
-    for (const u of ["./data/library.json", "./data/pages.json", "./data/firmware.json"]) {
+    for (const u of ["./data/library.json", "./data/pages.json", "./data/firmware.json", "./data/troubleshooting.json"]) {
       try { const r = await fetch(u, { cache: "no-cache" }); if (r.ok) await d.put(u, r); } catch (_) {}
     }
     self.skipWaiting();

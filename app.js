@@ -9,7 +9,7 @@ const MANUALS_CACHE = "manuals";
 const STALE_DAYS = 14, OLD_DAYS = 30;
 const DAY = 864e5;
 
-let LIB = null, FW = null, worker = null, workerReady = false, reqId = 0;
+let LIB = null, FW = null, TS = null, worker = null, workerReady = false, reqId = 0;
 let saved = new Map();                                   // file -> sha of the copy on this phone
 let savedDevices = new Set(store.get("savedDevices", []));
 let keepAll = store.get("keepAll", false);      // "Save all" was tapped: also save manuals added later
@@ -51,6 +51,7 @@ function show(v) {
   store.set("tab", v);
   document.body.classList.toggle("asking", v === "ask"); $("#composer").hidden = v !== "ask";
   if (v === "ask") renderChat();
+  if (v === "fix") renderFix();
   if (v === "firmware") { store.set("fwSeen", new Date().toISOString()); renderFwBadge(); }
   window.scrollTo(0, 0);
 }
@@ -474,10 +475,11 @@ async function sync(manual) {
     if (!LIB) $("#results").innerHTML = `<div class="empty">The library isn't on this phone yet. Open the app once with signal or Wi-Fi.</div>`;
   }
   try { const fw = await getJSON("data/firmware.json"); FW = fw.data; gotNetwork = gotNetwork || !fw.cached; } catch {}
+  try { TS = (await getJSON("data/troubleshooting.json")).data; } catch {}
   if (gotNetwork) store.set("lastSync", new Date().toISOString());
   else if (manual) toast("No connection. Using what's saved on this phone.");
   syncing = false; $("#syncBtn").disabled = false; $("#syncBtn").textContent = "Sync";
-  renderSync(); renderDevFilter(); renderLibrary(); renderFirmware(); renderBanners();
+  renderSync(); renderDevFilter(); renderLibrary(); renderFirmware(); renderBanners(); renderFix();
 }
 
 /* ---------- ask (chat) ----------
@@ -517,11 +519,13 @@ function renderChat() {
       ${m.missing ? `<div class="banner warn small">${esc(m.missing)}</div>` : ""}
       ${m.found ? answerCard(m.found, m.found.devName, m.found.title, m.found.rev) : ""}
       ${m.text ? `<div class="answer"><p>${esc(m.text)}</p></div>` : ""}
+      ${m.guide && TS?.guides?.find(g => g.id === m.guide) ? `<button class="btn primary" type="button" data-guide="${m.guide}">Open the “${esc(TS.guides.find(g => g.id === m.guide).title)}” checklist</button>` : ""}
       ${m.sources?.length ? `<div class="srcs">${m.sources.map(srcCard).join("")}</div>` : ""}</div>`;
   }).join("");
   C.querySelectorAll(".msg-b[data-i]").forEach(el => {
     const m = chat[+el.dataset.i];
     el.querySelectorAll(".src").forEach(b => b.onclick = () => openViewer(b.dataset.file, +b.dataset.page, m.words || []));
+    el.querySelectorAll("[data-guide]").forEach(b => b.onclick = () => openGuide(b.dataset.guide, m.device));
   });
 }
 function saveChat() { store.set("chat", chat.filter(m => !m.pending).slice(-30)); }
@@ -545,12 +549,23 @@ async function sendAsk() {
       const nd = devById(res.named), devName = res.namedMissing ? null : devById(res.named || res.prefer)?.name;
       const missing = res.namedMissing && nd ? (nd.docs.length ? `Nothing in the ${nd.name} manuals matched. These pages are from other devices.` : `There are no ${nd.name} manuals in the library yet. These pages are from other devices.`) : "";
       const found0 = !res.namedMissing && sources[0].answer ? sources[0] : null;
-      reply = { role: "b", missing, found: found0,
+      reply = { role: "b", missing, found: found0, device: !res.namedMissing && res.named ? res.named : null,
                 text: found0 ? "Other pages that may help:" : `Closest matches${devName ? " in the " + devName + " manuals" : ""}. Tap one to open the page.`,
                 sources: found0 ? sources : sources, words: res.words };
     }
   } catch (e) {
     reply = { role: "b", text: e.message || "Something went wrong. Try again." };
+  }
+  const ql = q.toLowerCase();
+  const neg = "\\b(no|not|can't|won't|don't|doesn't|isn't|aren't|lost|lose|bad|fail\\w*|drop\\w*|wont|cant|cannot|dont|doesnt|isnt|unable to)";
+  if (new RegExp(neg + "\\s.{0,25}(comm|communicat|talk|respond|answer|connect|reach|ping|see)").test(ql) || /time ?out|no response|crc|exception|illegal data|offline/.test(ql)
+      || /(wrong|zero|garbage|weird|off|bad|incorrect|negative)\s.{0,20}(reading|value|data|number|amps|volts|kw|kwh|current|voltage|power)/.test(ql)
+      || /(reading|readings|value|values|amps|volts|kw|kwh|current|voltage|power|pf|power factor)\b.{0,25}\b(wrong|off|zero|incorrect|garbage|weird|negative|too (high|low))/.test(ql)
+      || /(input|point|contact|status|di|ai)\b.{0,25}(stuck|not chang|never chang|always (on|off|open|closed)|wrong|inverted|backwards)/.test(ql)) {
+    reply.guide = /\b(di|do|ai|digital input|analog input|contact|i\/o|io point|input|output|status point|moxa|wago|axl|axioline|phoenix)\b/.test(ql) && !/(tcp|ip address|ping|485|modbus rtu)/.test(ql) ? "io"
+      : /(wrong|zero|garbage|weird|incorrect|negative|reading|value|scal|offset|swap|float)/.test(ql) && !/time ?out|no response|ping/.test(ql) ? "values"
+      : /gateway|pxg|exception 0?a|exception 0?b|unit id/.test(ql) ? "gateway"
+      : /tcp|ethernet|\bip\b|ping|network|switch|port 502|web page/.test(ql) ? "tcp" : "rtu";
   }
   chat.splice(chat.indexOf(pending), 1, reply);
   saveChat(); renderChat(); scrollChatEnd();
@@ -561,6 +576,72 @@ $("#askIn").addEventListener("input", autoGrow);
 $("#askIn").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAsk(); } });
 $("#askForm").addEventListener("submit", (e) => { e.preventDefault(); sendAsk(); });
 $("#newChat").onclick = () => { chat = []; lastDevice = null; store.set("chatDevice", null); saveChat(); renderChat(); };
+
+/* ---------- troubleshoot ----------
+   Step-by-step comms guides from data/troubleshooting.json. Ticks are kept per guide on this phone.
+   Steps with "lookup" words get a button that searches the chosen device's manuals. */
+let fixGuide = store.get("fixGuide", null);
+let fixTicks = store.get("fixTicks", {});      // {guideId: [stepKey, ...]}
+const stepKey = (si, i) => si + "." + i;
+function guideCount(g) { return g.sections.reduce((a, sec) => a + sec.steps.length, 0); }
+function renderFixDevices() {
+  const sel = $("#fixDev"), cur = store.get("fixDevice", "") || sel.value;
+  sel.innerHTML = `<option value="">Any device</option>` + (LIB?.devices || []).filter(d => d.docs.length).map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : "";
+}
+$("#fixDev").onchange = () => { store.set("fixDevice", $("#fixDev").value); renderFix(); };
+function lookUp(words) {
+  const dev = $("#fixDev").value;
+  show("search");
+  $("#q").value = words; $("#qDev").value = dev;
+  runSearch();
+}
+function renderFix() {
+  if (!$("#fixBody")) return;
+  renderFixDevices();
+  const B = $("#fixBody");
+  if (!TS?.guides?.length) { B.innerHTML = `<div class="empty">The troubleshooting guides aren't on this phone yet. Open the app once with signal.</div>`; return; }
+  const g = TS.guides.find(x => x.id === fixGuide);
+  const dev = devById($("#fixDev").value);
+  if (!g) {
+    B.innerHTML = `<p class="small muted" style="margin:0">Pick the problem. Work through the steps in order and tick each one off. Pick a device above to get buttons that jump to its manual.</p>` +
+      TS.guides.map(x => {
+        const n = guideCount(x), done = (fixTicks[x.id] || []).length;
+        return `<button class="guide" type="button" data-g="${x.id}"><h3>${esc(x.title)}</h3><span class="small muted">${esc(x.summary || "")}</span>
+          <span class="small">${done ? `${done} of ${n} steps checked` : `${n} steps`}</span>${done ? `<div class="meter"><span style="width:${done / n * 100}%"></span></div>` : ""}</button>`;
+      }).join("");
+    B.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { fixGuide = b.dataset.g; store.set("fixGuide", fixGuide); renderFix(); window.scrollTo(0, 0); });
+    return;
+  }
+  const ticks = new Set(fixTicks[g.id] || []), n = guideCount(g);
+  B.innerHTML = `<div class="row" style="justify-content:space-between"><button class="btn" id="fixBack" type="button">‹ All guides</button><button class="btn" id="fixReset" type="button">Start over</button></div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:6px"><h3>${esc(g.title)}</h3><span class="small muted">${esc(g.summary || "")}</span>
+      <span class="small">${ticks.size} of ${n} steps checked${dev ? ` · working on ${esc(dev.name)}` : ""}</span><div class="meter"><span style="width:${ticks.size / n * 100}%"></span></div></div>` +
+    g.sections.map((sec, si) => `<div class="fixsec"><h3>${esc(sec.title)}</h3>${sec.steps.map((st, i) => {
+      const k = stepKey(si, i), on = ticks.has(k), id = `fx-${g.id}-${si}-${i}`;
+      return `<div class="step${on ? " done" : ""}${st.safety ? " safety" : ""}"><input type="checkbox" id="${id}" data-k="${k}" ${on ? "checked" : ""}>
+        <div class="st"><label for="${id}">${esc(st.text)}</label>${st.detail ? `<span class="small">${esc(st.detail)}</span>` : ""}
+        ${st.lookup ? `<button class="lookbtn" type="button" data-look="${esc(st.lookup)}">${dev ? `Find in the ${esc(dev.name)} manual` : "Search the manuals"} ›</button>` : ""}</div></div>`;
+    }).join("")}</div>`).join("");
+  $("#fixBack").onclick = () => { fixGuide = null; store.set("fixGuide", null); renderFix(); window.scrollTo(0, 0); };
+  let armed = 0;
+  $("#fixReset").onclick = () => {
+    if (Date.now() - armed > 4000) { armed = Date.now(); toast("Tap Start over again to clear the ticks in this guide."); return; }
+    delete fixTicks[g.id]; store.set("fixTicks", fixTicks); renderFix();
+  };
+  B.querySelectorAll(".step input").forEach(cb => cb.onchange = () => {
+    const set = new Set(fixTicks[g.id] || []);
+    cb.checked ? set.add(cb.dataset.k) : set.delete(cb.dataset.k);
+    fixTicks[g.id] = [...set]; store.set("fixTicks", fixTicks);
+    const y = window.scrollY; renderFix(); window.scrollTo(0, y);
+  });
+  B.querySelectorAll("[data-look]").forEach(b => b.onclick = () => lookUp(b.dataset.look));
+}
+function openGuide(id, device) {
+  fixGuide = id; store.set("fixGuide", id);
+  if (device && devById(device)?.docs.length) store.set("fixDevice", device), $("#fixDev").value = device;
+  show("fix"); renderFix(); window.scrollTo(0, 0);
+}
 
 /* ---------- boot ---------- */
 (async function boot() {

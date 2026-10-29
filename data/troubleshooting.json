@@ -1,0 +1,560 @@
+{
+ "_help": "Comms troubleshooting guides shown in the app's Troubleshoot tab. Edit freely, then run tools/publish.sh. Each step: text (the check), detail (how/why, optional), lookup (search words; adds a 'Look it up in the <device> manual' button when a device is picked), safety (true shows it as a safety step).",
+ "updated": "2026-10-29",
+ "guides": [
+  {
+   "id": "rtu",
+   "title": "No comms on Modbus RTU (RS-485)",
+   "summary": "Device doesn't answer on a serial line: timeouts, CRC errors, or one device dropping out.",
+   "sections": [
+    {
+     "title": "Before you start",
+     "steps": [
+      {
+       "text": "Work on comms wiring inside energized gear only as a qualified person with the right PPE, and follow site LOTO.",
+       "safety": true
+      },
+      {
+       "text": "Write down what you see: which devices fail, all or one, timeouts or CRC errors, and when it started.",
+       "detail": "One device failing points to that device's settings or its wiring. Every device failing points to the master, the trunk wiring, termination or the serial settings."
+      },
+      {
+       "text": "Confirm the device is powered and healthy: display on, no fault or alarm LED.",
+       "lookup": "led status fault"
+      }
+     ]
+    },
+    {
+     "title": "Wiring",
+     "steps": [
+      {
+       "text": "Check polarity: D+ to D+ and D- to D- on every device.",
+       "detail": "Manufacturers label these differently (A/B, D0/D1, +/-, and some swap what A and B mean). If one device won't answer and everything else checks out, swap its two data wires as a test.",
+       "lookup": "rs485 wiring terminal"
+      },
+      {
+       "text": "Connect the common or reference terminal (GND, SC, COM, 0V) where the device has one.",
+       "detail": "Without a common reference, devices on different power sources can sit outside the receiver's voltage range and drop messages."
+      },
+      {
+       "text": "Ground the cable shield at one end only, usually at the master.",
+       "detail": "Grounding at both ends can carry ground-loop current on the shield and add noise."
+      },
+      {
+       "text": "Make sure the line is a daisy chain: in and out of each device, no star or long stub runs.",
+       "detail": "RS-485 is designed for one continuous run. Stars and stubs cause reflections that corrupt messages, especially at higher baud rates."
+      },
+      {
+       "text": "Check length and device count: up to about 1,200 m (4,000 ft) total at lower baud rates, and up to 32 standard unit loads per segment without a repeater.",
+       "detail": "Longer runs or more devices need a lower baud rate or a repeater. Check each device's unit-load rating; some count as 1/4 or 1/8 load."
+      },
+      {
+       "text": "Use twisted-pair cable rated for RS-485 (about 120 Ω), with the two data wires on the same twisted pair."
+      }
+     ]
+    },
+    {
+     "title": "Termination and biasing",
+     "steps": [
+      {
+       "text": "Fit a 120 Ω termination at the two physical ends of the line only, and none in the middle.",
+       "detail": "Many devices have a built-in terminator switch or jumper. A terminator turned on at a mid-line device is a common cause of errors.",
+       "lookup": "termination resistor rs485"
+      },
+      {
+       "text": "Make sure biasing (fail-safe) is applied once on the line, usually at the master or gateway.",
+       "detail": "Biasing holds the idle line in a known state. With none, receivers can see noise as data; with too many devices biasing, the line can be loaded down.",
+       "lookup": "bias resistor"
+      },
+      {
+       "text": "Measure with power off: resistance between D+ and D- should read about 60 Ω.",
+       "detail": "About 60 Ω means both 120 Ω terminators are in place. About 120 Ω means one is missing. Much lower than 60 Ω means extra terminators or a short. Very high means no termination or an open circuit."
+      },
+      {
+       "text": "Measure with power on and the line idle: voltage between D+ and D- should be at least 200 mV.",
+       "detail": "Below about 200 mV at idle the line isn't biased and receivers may read garbage. A reading that's the wrong polarity can mean swapped wires."
+      }
+     ]
+    },
+    {
+     "title": "Device settings",
+     "steps": [
+      {
+       "text": "Check the Modbus address is unique on this line, between 1 and 247, and matches what the master polls.",
+       "detail": "Two devices with the same address on one line will collide and both look broken. Use the client's point list for the correct address.",
+       "lookup": "modbus address"
+      },
+      {
+       "text": "Check baud rate, parity and stop bits match on every device and the master.",
+       "detail": "For example 19200 8-E-1 versus 19200 8-N-1. A single mismatched device usually shows CRC errors or no answer.",
+       "lookup": "baud rate parity stop bits"
+      },
+      {
+       "text": "Confirm the port's protocol is set to Modbus RTU, not ASCII or another protocol, and that the port is enabled.",
+       "lookup": "protocol rs485 port"
+      },
+      {
+       "text": "If you changed settings, save or apply them, and power-cycle the device if its manual says changes take effect after a restart.",
+       "lookup": "save settings restart"
+      }
+     ]
+    },
+    {
+     "title": "Isolate the problem",
+     "steps": [
+      {
+       "text": "Watch the device's TX/RX lights while the master polls.",
+       "detail": "RX blinking but no TX: the device hears the line but isn't answering, usually address or serial settings. No RX at all: wiring, polarity or the master isn't polling this port.",
+       "lookup": "led tx rx communication"
+      },
+      {
+       "text": "Test the device alone: disconnect it from the line and poll it directly from a laptop with ModScan and a USB-to-RS-485 adapter.",
+       "detail": "If it answers on its own, the device is fine and the problem is the line: wiring, termination, a duplicate address or another device. If it doesn't, the problem is the device's settings or hardware."
+      },
+      {
+       "text": "Split the line in half and test each half to find the device or section causing trouble.",
+       "detail": "One bad transceiver or a short anywhere on the line can take down every device on it."
+      },
+      {
+       "text": "On the master or gateway, check the response timeout and the delay between polls.",
+       "detail": "Slow devices or long lines need more time to answer. If timeouts are random, try a longer timeout before changing anything else."
+      }
+     ]
+    },
+    {
+     "title": "What the errors mean",
+     "steps": [
+      {
+       "text": "Timeout or no response: the device never answered.",
+       "detail": "Wiring, polarity, wrong address, wrong baud or parity, or the device is off or faulted."
+      },
+      {
+       "text": "CRC or framing errors: the device answered but the message was garbled.",
+       "detail": "Baud or parity mismatch, missing or extra termination, no biasing, noise, or a star or stub in the wiring."
+      },
+      {
+       "text": "Exception 01, illegal function: the device doesn't support the function code being used.",
+       "detail": "For example, reading input registers (04) from a device that only has holding registers (03)."
+      },
+      {
+       "text": "Exception 02, illegal data address: the register asked for doesn't exist on this device.",
+       "detail": "Often an off-by-one register offset or the wrong register map. See the 'readings are wrong' guide.",
+       "lookup": "modbus register map"
+      },
+      {
+       "text": "Exception 03, illegal data value: a value or the number of registers requested isn't allowed.",
+       "detail": "For example, asking for more registers than the device allows in one read."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tcp",
+   "title": "No comms on Modbus TCP (Ethernet)",
+   "summary": "Can't reach the device over the network, or it connects but doesn't answer.",
+   "sections": [
+    {
+     "title": "Before you start",
+     "steps": [
+      {
+       "text": "Work inside energized gear only as a qualified person with the right PPE, and follow site LOTO.",
+       "safety": true
+      },
+      {
+       "text": "Don't change switch, VLAN or firewall settings on the client's network yourself. Coordinate with the client's network or IT team.",
+       "safety": true
+      }
+     ]
+    },
+    {
+     "title": "Physical link",
+     "steps": [
+      {
+       "text": "Check the link lights on the device's Ethernet port and on the switch port: both should be lit.",
+       "detail": "No link light: bad cable or connector, wrong port, switch port disabled, or the device's Ethernet isn't enabled.",
+       "lookup": "ethernet led link"
+      },
+      {
+       "text": "Confirm the cable is plugged into the device's Ethernet port, not a service or USB port, and swap in a known-good patch cable."
+      },
+      {
+       "text": "If the device has two Ethernet ports, check which one is configured for Modbus TCP.",
+       "lookup": "ethernet port network 1 network 2"
+      }
+     ]
+    },
+    {
+     "title": "IP settings",
+     "steps": [
+      {
+       "text": "Read the device's actual IP address, subnet mask and gateway from its display or web page.",
+       "detail": "If it's set to DHCP it may have picked up a different address than expected, or none at all.",
+       "lookup": "ip address subnet mask display"
+      },
+      {
+       "text": "Compare with the client's point list: IP, subnet and gateway must match exactly.",
+       "detail": "A wrong subnet mask can let a device answer some hosts but not the EPMS server."
+      },
+      {
+       "text": "Check for a duplicate IP address: unplug the device and ping its address. If something still answers, another device has that IP."
+      },
+      {
+       "text": "If you changed network settings, save or apply them, and restart the device if its manual says so.",
+       "lookup": "network settings save restart"
+      }
+     ]
+    },
+    {
+     "title": "Reach the device",
+     "steps": [
+      {
+       "text": "Put your laptop on the same subnet as the device and ping it.",
+       "detail": "Ping works: the network path is fine, go on to the Modbus checks. Ping fails: cable, IP settings, VLAN, switch port or a firewall. Some devices block ping, so also try their web page."
+      },
+      {
+       "text": "Test that port 502 is open: connect with ModScan, or run Test-NetConnection <ip> -Port 502 (Windows) or nc -vz <ip> 502 (Mac).",
+       "detail": "Ping works but 502 is closed: Modbus TCP is turned off on the device, or a firewall between you and the device blocks it."
+      },
+      {
+       "text": "Read a known register with ModScan from your laptop.",
+       "detail": "If your laptop reads it but the EPMS server can't, the problem is between the server and the device: routing, VLAN, firewall or the device's allowed-client list."
+      }
+     ]
+    },
+    {
+     "title": "Device Modbus TCP settings",
+     "steps": [
+      {
+       "text": "Check Modbus TCP is enabled on the device.",
+       "detail": "Some devices ship with it disabled or turn it off under security hardening settings.",
+       "lookup": "modbus tcp enable"
+      },
+      {
+       "text": "Check for an allowed-client or trusted-host list and make sure the EPMS server's IP is on it.",
+       "detail": "Some meters only accept Modbus TCP from listed IP addresses, and some do so by default.",
+       "lookup": "trusted host modbus tcp access"
+      },
+      {
+       "text": "Check the port number: 502 unless the client's standard says otherwise.",
+       "lookup": "modbus tcp port 502"
+      },
+      {
+       "text": "Check the device's limit on simultaneous Modbus TCP connections.",
+       "detail": "If the EPMS server, a laptop and other software are all connected, the device may refuse new connections. Close extra connections and try again.",
+       "lookup": "maximum connections modbus tcp"
+      },
+      {
+       "text": "Check the unit ID the master sends.",
+       "detail": "Direct-connected devices usually answer unit ID 1 or 255 (some accept any). Gateways use the unit ID to pick the downstream device; see the gateway guide.",
+       "lookup": "unit id"
+      }
+     ]
+    },
+    {
+     "title": "What the errors mean",
+     "steps": [
+      {
+       "text": "Connection refused: the device is reachable but nothing is listening on that port.",
+       "detail": "Modbus TCP is off, wrong port, or the device's connection limit is reached."
+      },
+      {
+       "text": "Connection timed out: nothing came back at all.",
+       "detail": "Wrong IP, no network path, a firewall dropping traffic, or the device is off."
+      },
+      {
+       "text": "Connects, then drops or no response: the device accepted the connection but didn't answer the request.",
+       "detail": "Allowed-client list, wrong unit ID, or the request is for registers or a function the device doesn't support."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "gateway",
+   "title": "Devices behind a gateway (TCP to RS-485)",
+   "summary": "The master reaches the gateway, but some or all of the serial devices behind it don't answer. For example PXG 900, PXG 1000, or a UPS network card.",
+   "sections": [
+    {
+     "title": "Gateway first",
+     "steps": [
+      {
+       "text": "Confirm the gateway itself answers: ping it and open its web page.",
+       "detail": "If the gateway doesn't answer, work through the Modbus TCP guide first."
+      },
+      {
+       "text": "Open the gateway's device list or status page and check whether it sees each downstream device as online.",
+       "detail": "If the gateway shows a device offline, the problem is on the serial side: work through the RS-485 guide for that line.",
+       "lookup": "device list status online"
+      }
+     ]
+    },
+    {
+     "title": "Addressing",
+     "steps": [
+      {
+       "text": "Check the unit ID the master sends matches the downstream device's serial address (or the gateway's mapping for it).",
+       "detail": "Most gateways route a Modbus TCP request to the serial device whose address equals the unit ID. Some use their own mapping table. Check the gateway's configuration and the client's point list.",
+       "lookup": "unit id slave address mapping"
+      },
+      {
+       "text": "Check each downstream device is listed or configured on the correct gateway serial port.",
+       "lookup": "serial port com device configuration"
+      }
+     ]
+    },
+    {
+     "title": "Serial side",
+     "steps": [
+      {
+       "text": "Check the gateway's serial port baud rate, parity and stop bits match every device on that line.",
+       "lookup": "baud rate parity serial port"
+      },
+      {
+       "text": "Check the gateway's serial timeout is long enough for the slowest device on the line.",
+       "lookup": "timeout serial"
+      },
+      {
+       "text": "Check termination and biasing on the serial line, with the gateway at one end.",
+       "lookup": "termination bias rs485"
+      }
+     ]
+    },
+    {
+     "title": "What the errors mean",
+     "steps": [
+      {
+       "text": "Exception 0A (10), gateway path unavailable: the gateway has no route for that unit ID.",
+       "detail": "The unit ID isn't mapped, the serial port isn't configured, or the device isn't in the gateway's list."
+      },
+      {
+       "text": "Exception 0B (11), gateway target device failed to respond: the gateway tried the serial device and got no answer.",
+       "detail": "Serial side problem: device address, serial settings, wiring, termination, or the device is off."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "io",
+   "title": "Hardwired I/O point reads wrong or doesn't change",
+   "summary": "A digital or analog point on remote I/O (Moxa, WAGO, Phoenix) shows the wrong state, never changes, or reads the wrong value.",
+   "sections": [
+    {
+     "title": "Before you start",
+     "steps": [
+      {
+       "text": "Work only on the I/O and its field wiring at the remote I/O panel. Don't open or touch power wiring. Inside energized gear, work as a qualified person with the right PPE and follow site LOTO.",
+       "safety": true
+      },
+      {
+       "text": "From the point list, note what this point should be: channel or terminal, input type (dry contact, wet 24 VDC, 4–20 mA, 0–10 V), normal state, and the Modbus address the EPMS reads."
+      }
+     ]
+    },
+    {
+     "title": "Module and power",
+     "steps": [
+      {
+       "text": "Check the I/O module's power and status lights: module OK, no fault or error indication.",
+       "lookup": "led status diagnostics"
+      },
+      {
+       "text": "Check field power is present where the inputs need it, for example 24 VDC field supply to the I/O modules.",
+       "detail": "Many I/O systems power the field side separately from the coupler. With no field power the inputs read off or zero.",
+       "lookup": "field supply 24 vdc power"
+      },
+      {
+       "text": "Watch the channel's own indicator light while the field device changes state.",
+       "detail": "Light follows the field device but the EPMS doesn't: the problem is mapping or configuration. Light doesn't change: the problem is the field signal or wiring to the terminal.",
+       "lookup": "channel led input indicator"
+      }
+     ]
+    },
+    {
+     "title": "Field signal at the terminals",
+     "steps": [
+      {
+       "text": "Confirm the wires are landed on the terminals the point list calls for, and that the common or return is landed too.",
+       "detail": "A point on the wrong terminal often shows up as two points swapped, or one point following another device.",
+       "lookup": "terminal wiring digital input"
+      },
+      {
+       "text": "Measure the signal at the I/O terminals with a meter: voltage for a wet contact, continuity for a dry contact, current or voltage for an analog input.",
+       "detail": "If the signal at the terminals is wrong, the problem is upstream in the field device or its wiring. Flag it to whoever owns that device. If it's right at the terminals, the problem is in the I/O configuration or mapping."
+      },
+      {
+       "text": "For a dry contact, check whether it's normally open or normally closed and what state the device should be in right now.",
+       "detail": "A point that's always the opposite of what's expected is usually an NO/NC mismatch or an inverted setting in the EPMS point, not a fault."
+      }
+     ]
+    },
+    {
+     "title": "I/O configuration",
+     "steps": [
+      {
+       "text": "Check the input type for the channel matches the field signal: dry or wet contact, sinking or sourcing, voltage or current, and the analog range (4–20 mA, 0–10 V).",
+       "detail": "An analog input set to the wrong range reads a scaled or clipped value. A sinking input wired as sourcing never turns on.",
+       "lookup": "input type sink source analog range"
+      },
+      {
+       "text": "Check the channel's mode: plain input, counter, or another mode.",
+       "detail": "For example, a Moxa ioLogik channel set to counter mode won't report a simple on/off state.",
+       "lookup": "di mode counter"
+      },
+      {
+       "text": "Check the input filter or debounce time if a fast signal is missed or a slow one chatters.",
+       "lookup": "filter debounce time"
+      }
+     ]
+    },
+    {
+     "title": "Mapping to Modbus",
+     "steps": [
+      {
+       "text": "Confirm the order of the I/O modules on the rail matches the drawing.",
+       "detail": "Couplers like WAGO 750 and Phoenix Axioline build their register map from the physical module order. One module out of place shifts every point after it.",
+       "lookup": "process image module order"
+      },
+      {
+       "text": "Check the Modbus address and function code for the point: discrete inputs (02) or coils (01) for on/off points, input (04) or holding (03) registers for analog values.",
+       "detail": "Reading an on/off point as a register, or the wrong bit within a register, gives a point that never changes or follows a different channel.",
+       "lookup": "modbus address mapping digital input coil"
+      },
+      {
+       "text": "Read the point directly with ModScan while the field device changes state.",
+       "detail": "ModScan changes but the EPMS doesn't: fix the EPMS point. ModScan doesn't change either: go back to the field signal and I/O configuration steps."
+      },
+      {
+       "text": "For an analog point, check the raw value against the scaling in the EPMS point.",
+       "detail": "For example, a 4–20 mA input may read as a raw count that the EPMS must scale to engineering units. Compare ModScan's raw value with the expected range.",
+       "lookup": "analog input scaling raw value"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "values",
+   "title": "Comms work but readings are wrong",
+   "summary": "The device answers, but values are zero, huge, garbled, off by a factor, or in the wrong place. First find out whether the meter itself is wrong or only the EPMS.",
+   "sections": [
+    {
+     "title": "Before you start",
+     "steps": [
+      {
+       "text": "Don't touch CTs, CT shorting blocks or other wiring in the gear. If a physical wiring problem is suspected, flag it to the electrical contractor.",
+       "safety": true
+      },
+      {
+       "text": "Have the register map for this device and firmware open, and the client's point list for the expected values and settings.",
+       "lookup": "modbus register map"
+      }
+     ]
+    },
+    {
+     "title": "Start here",
+     "steps": [
+      {
+       "text": "Compare the meter's own display with the value in the EPMS for the same reading, like phase A voltage or current.",
+       "detail": "Display wrong too: the problem is a setting in the meter. Go to 'Meter settings'. Display right but EPMS wrong: the problem is how the value is read. Go to the ModScan sections."
+      }
+     ]
+    },
+    {
+     "title": "Meter settings (when the meter's display is wrong too)",
+     "steps": [
+      {
+       "text": "Check the CT ratio settings against the point list and CT nameplates: primary amps and the secondary rating (5 A or 1 A).",
+       "detail": "Current, power and energy off by a constant factor usually means a wrong CT primary, or a 5 A setting on 1 A CTs (or the reverse).",
+       "lookup": "ct ratio primary secondary"
+      },
+      {
+       "text": "Check the voltage input setting: direct-connected, or through PTs with the right PT ratio.",
+       "detail": "A PT-fed meter left on direct connection (or the reverse) reads voltage and power off by the PT ratio.",
+       "lookup": "pt ratio vt direct connection"
+      },
+      {
+       "text": "Check the wiring-mode or system-type setting matches the one-line: wye or delta, 3-wire or 4-wire, single or three phase.",
+       "detail": "A wrong wiring mode gives wrong voltages, power and power factor even with correct ratios.",
+       "lookup": "wiring configuration wye delta system type"
+      },
+      {
+       "text": "Check nominal voltage and frequency settings.",
+       "detail": "Wrong nominal values mainly affect power-quality events and alarms, and on some meters percent readings.",
+       "lookup": "nominal voltage frequency"
+      },
+      {
+       "text": "Check energy and demand settings: units (kWh or MWh), demand interval and method, and import/export (delivered/received) direction.",
+       "detail": "Energy off by 1000, or energy counting the wrong direction, usually comes from these settings rather than the measurement.",
+       "lookup": "energy units demand interval delivered received"
+      },
+      {
+       "text": "Check whether the EPMS point is reading an instantaneous, average or demand value, and that it matches what you're comparing against.",
+       "lookup": "demand average instantaneous"
+      },
+      {
+       "text": "Only change meter settings as the client's standards and point list allow, and note what you changed and from what.",
+       "safety": true
+      },
+      {
+       "text": "If one phase shows negative power, a wrong power factor, or zero current on a loaded circuit, and the settings above are right, don't touch the CTs. Note the meter, phase and readings and flag it to the electrical contractor.",
+       "detail": "These usually point to CT polarity, phase order or a shorting block, which are wiring issues for the electrical contractor.",
+       "lookup": "ct polarity phase"
+      }
+     ]
+    },
+    {
+     "title": "Read it directly with ModScan (when the display is right but the EPMS is wrong)",
+     "steps": [
+      {
+       "text": "Connect ModScan straight to the device: TCP/IP with the device's IP and port 502, or the serial port with the same baud, parity and stop bits as the device.",
+       "detail": "Reading directly takes the EPMS software and any gateway out of the picture. If ModScan reads correct values, the problem is in the EPMS point configuration, not the device."
+      },
+      {
+       "text": "Set up the read to match the register map: device (unit) ID, point type 03 holding registers or 04 input registers, start address and length.",
+       "detail": "Use the function code the register map lists. The wrong one returns different data or an error.",
+       "lookup": "function code holding register input register"
+      },
+      {
+       "text": "Pick a value you can check against the device's own display, like phase A voltage, and read that register first.",
+       "detail": "A known value tells you immediately whether addressing and format are right before you look at anything else."
+      },
+      {
+       "text": "Confirm ModScan shows valid responses, not timeouts or exceptions.",
+       "detail": "If ModScan can't read the device either, go back to the RS-485 or Modbus TCP guide."
+      }
+     ]
+    },
+    {
+     "title": "Find the problem in ModScan",
+     "steps": [
+      {
+       "text": "Values look shifted by one register: adjust the start address by one.",
+       "detail": "Register 40001 in a manual is usually offset 0 on the wire. ModScan addresses usually start at 1, while some EPMS software counts from 0. Once ModScan shows the right value, note the address it took and compare with the EPMS point.",
+       "lookup": "register address offset"
+      },
+      {
+       "text": "Values look like nonsense: switch ModScan's display format to match the data type in the map.",
+       "detail": "A 32-bit float read as two 16-bit numbers looks like garbage. Switch the display between decimal, hex and floating point to match the type column.",
+       "lookup": "float data type register"
+      },
+      {
+       "text": "Float values are wildly huge or tiny: try the swapped floating-point display.",
+       "detail": "Devices differ on which 16-bit word of a 32-bit value comes first. If the swapped view shows the right number, set the same word order in the EPMS point.",
+       "lookup": "word order byte swap"
+      },
+      {
+       "text": "Values are off by exactly 10, 100 or 1000: check the register map for a scale factor or multiplier.",
+       "detail": "Compare ModScan's raw value with the display. The difference is usually a scaling setting in the EPMS point, applied either not at all or twice.",
+       "lookup": "scaling multiplier"
+      },
+      {
+       "text": "Once ModScan shows correct values, copy the exact working settings (ID, function code, address, data type, word order, scaling) into the EPMS point configuration."
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
