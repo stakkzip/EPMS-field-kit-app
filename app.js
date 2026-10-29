@@ -65,13 +65,38 @@ function renderSync() {
   txt.textContent = (navigator.onLine ? "Synced " + ago(last) : "Offline · synced " + ago(last)) + lib;
 }
 setInterval(renderSync, 60000);
-window.addEventListener("online", () => { renderSync(); sync(false); });
+window.addEventListener("online", () => { renderSync(); checkAppVersion(); sync(false); });
 let lastCheck = 0;
 function checkForUpdates(minMinutes) {
   if (!navigator.onLine || Date.now() - lastCheck < minMinutes * 60000) return;
   lastCheck = Date.now(); sync(false);
 }
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { renderSync(); checkForUpdates(15); } });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { renderSync(); checkAppVersion(); checkForUpdates(15); } });
+
+/* ---------- app version updates ----------
+   Home Screen apps are usually resumed, not restarted, so they'd keep running an old version.
+   Each time the app comes back to the screen it asks for the latest version; when one has been
+   installed it reloads into it, or offers a button if the tech is in the middle of something. */
+let swReg = null, lastVersionCheck = 0, resumedAt = 0;
+function checkAppVersion() {
+  resumedAt = Date.now();
+  if (!swReg || !navigator.onLine || Date.now() - lastVersionCheck < 60000) return;
+  lastVersionCheck = Date.now();
+  swReg.update().catch(() => {});
+}
+function busyRightNow() {
+  const a = document.activeElement;
+  return !$("#viewer").hidden || askBusy || busy || (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && a.value);
+}
+function onNewVersion() {
+  if (!busyRightNow()) { location.reload(); return; }
+  if ($("#updateReady")) return;
+  const el = document.createElement("div");
+  el.id = "updateReady"; el.className = "banner";
+  el.innerHTML = `<b>A new version of the app is ready</b><div class="row"><button class="btn primary" type="button">Update now</button><span class="small muted">Takes a second. Saved manuals stay on the phone.</span></div>`;
+  el.querySelector("button").onclick = () => location.reload();
+  $("#banners").prepend(el);
+}
 window.addEventListener("pageshow", (e) => { if (e.persisted) checkForUpdates(15); });
 setInterval(() => { if (document.visibilityState === "visible") checkForUpdates(30); }, 5 * 60000);
 window.addEventListener("offline", renderSync);
@@ -91,7 +116,9 @@ function renderBanners() {
   if (last && age > STALE_DAYS) out.push(`<div class="banner ${age > OLD_DAYS ? "bad" : "warn"}"><b>Library last updated ${ago(last)}</b><span class="small">Manuals and firmware info may be out of date. Connect to Wi-Fi or signal and tap Sync.</span></div>`);
   const outdated = [...saved].filter(([f, sha]) => { const i = docInfo(f); return i && i.doc.sha && i.doc.sha !== sha; }).length;
   if (outdated && navigator.onLine) out.push(`<div class="banner"><b>${outdated} saved manual${outdated > 1 ? "s have" : " has"} a newer version</b><div class="row"><button class="btn primary" data-act="update" type="button">Update now</button></div></div>`);
+  const upd = $("#updateReady");
   $("#banners").innerHTML = out.join("");
+  if (upd) $("#banners").prepend(upd);
   $("#banners").querySelectorAll("[data-act]").forEach(b => b.onclick = () => {
     const a = b.dataset.act;
     if (a === "saveall") saveAllManuals();
@@ -538,7 +565,15 @@ $("#newChat").onclick = () => { chat = []; lastDevice = null; store.set("chatDev
 /* ---------- boot ---------- */
 (async function boot() {
   if ("serviceWorker" in navigator) {
-    try { await navigator.serviceWorker.register("sw.js"); } catch (e) { console.warn("Offline mode unavailable", e); }
+    try {
+      let hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!hadController) { hadController = true; return; }   // first install, nothing to reload
+        onNewVersion();
+      });
+      swReg = await navigator.serviceWorker.register("sw.js", { updateViaCache: "none" });
+      lastVersionCheck = Date.now();
+    } catch (e) { console.warn("Offline mode unavailable", e); }
   }
   try { localStorage.removeItem("crewCode"); } catch {}
   // Old chats may hold AI answers from the test version; start fresh.

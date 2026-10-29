@@ -4,7 +4,7 @@
      timeout, fall back to the phone's copy. Responses served from the phone carry X-From-Cache: 1.
    - Manuals: served from the phone when saved, otherwise from the internet. The app decides what
      gets saved (cache "manuals"). */
-const SHELL_VERSION = "shell-2d436dcaed";
+const SHELL_VERSION = "shell-94e34407cd";
 const DATA_CACHE = "data";
 const MANUALS_CACHE = "manuals";
 const VENDOR_CACHE = "vendor-v1";
