@@ -68,7 +68,13 @@
     "pxm 4000",
     "pxm 6000",
     "pxm468k"
-   ]
+   ],
+   "firmware": {
+    "version": "13.4.0.28",
+    "as_of": "2026-10-28",
+    "source": "Eaton PXM 4000/6000/8000 firmware downloads page",
+    "url": "https://www.eaton.com/us/en-us/products/low-voltage-power-distribution-control-systems/power-and-energy-monitoring-equipment-and-software/power-xpert-meter-4000-6000-8000-firmware-downloads.html"
+   }
   },
   {
    "id": "pxm3000",
@@ -110,7 +116,13 @@
    ],
    "aliases": [
     "pxm1k"
-   ]
+   ],
+   "firmware": {
+    "version": "3.7.3",
+    "as_of": "2026-10-28",
+    "source": "Eaton PXM 1000 product page (meter software)",
+    "url": "https://www.eaton.com/us/en-us/skuPage.PXM1000MA44.html"
+   }
   },
   {
    "id": "pxq",
@@ -175,7 +187,13 @@
    "aliases": [
     "umg604",
     "umg 604"
-   ]
+   ],
+   "firmware": {
+    "version": "5.3.0",
+    "as_of": "2026-02-01",
+    "source": "Firmware the Feb 2026 UMG 604-PRO manual was written for",
+    "url": "https://www.janitza.com"
+   }
   },
   {
    "id": "umg801",
@@ -196,7 +214,13 @@
    ],
    "aliases": [
     "umg801"
-   ]
+   ],
+   "firmware": {
+    "version": "1.7.3",
+    "as_of": "2026-07-01",
+    "source": "Firmware the Jul 2026 UMG 801 manual was written for",
+    "url": "https://www.janitza.com"
+   }
   },
   {
    "id": "hdpm6000",
@@ -260,7 +284,13 @@
    "aliases": [
     "pxg1000",
     "pdmc"
-   ]
+   ],
+   "firmware": {
+    "version": "2025.6.1",
+    "as_of": "2026-10-29",
+    "source": "PXG1000 PDMC release notes",
+    "url": "https://manuals.plus/m/71f9d37a4e14c0f80ce1c12a47adb35c109283d9852f412bbf21b3fed4a78146"
+   }
   },
   {
    "id": "moxa-e1210",
@@ -283,7 +313,14 @@
     "moxa",
     "e1210",
     "iologik"
-   ]
+   ],
+   "firmware": {
+    "version": "v4.0",
+    "released": "2025-08-29",
+    "as_of": "2026-10-29",
+    "source": "Moxa ioLogik E1210 software release history",
+    "url": "https://www.moxa.com/Moxa/media/PDIM/S100000327/ioLogik%20E1200%20Series_moxa-iologik-e1200-series-iologik-e1210-e1210-t-firmware-v4.0.1kp_Software%20Release%20History.pdf"
+   }
   },
   {
    "id": "wago750",
@@ -454,6 +491,6 @@
    ]
   }
  ],
- "version": "d666eb4e920a",
- "built": "2026-10-29T12:27:30+00:00"
+ "version": "04c1df75c0af",
+ "built": "2026-10-29T12:59:46+00:00"
 }

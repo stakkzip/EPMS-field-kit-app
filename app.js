@@ -24,7 +24,13 @@ function ago(t) {
   if (s < 90) return "just now"; if (s < 3600) return Math.round(s / 60) + " min ago";
   if (s < 86400) return Math.round(s / 3600) + " hr ago"; const d = Math.round(s / 86400); return d + (d === 1 ? " day ago" : " days ago");
 }
-function fmtDate(t) { try { return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); } catch { return t; } }
+function fmtDate(t) {
+  try {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t || "");          // plain dates are local, not UTC midnight
+    const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(t);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  } catch { return t; }
+}
 const devById = (id) => LIB?.devices.find(d => d.id === id);
 function docInfo(file) { for (const d of LIB?.devices || []) for (const x of d.docs) if (x.file === file) return { dev: d, doc: x }; return null; }
 const revTag = (x) => x?.rev ? `<span class="rev${/^undated/i.test(x.rev) ? " undated" : ""}">${esc(x.rev)}</span>` : "";
@@ -92,6 +98,22 @@ function renderBanners() {
     if (a === "pick") show("library");
     if (a === "update") saveDevices([...savedDevices]);
   });
+}
+
+
+/* Latest firmware for a device: the weekly check's result when it has a version,
+   otherwise the version looked up by hand and stored in the catalog. */
+function latestFirmware(d) {
+  const f = FW?.devices?.[d.id];
+  if (f?.latest) return { version: f.latest, date: f.changed_on && f.status === "new" ? f.changed_on : (f.checked || FW.checked), isNew: f.status === "new", from: "weekly check", url: f.url };
+  if (d.firmware?.version) return { version: d.firmware.version, date: d.firmware.as_of, released: d.firmware.released, isNew: false, from: d.firmware.source, url: d.firmware.url };
+  return null;
+}
+function fwLine(d) {
+  const f = latestFirmware(d);
+  if (!f) return `<div class="fwline muted">Latest firmware: not checked yet</div>`;
+  return `<div class="fwline">${f.isNew ? `<span class="grade g-strong">New</span> ` : ""}Latest firmware <span class="mono"><b>${esc(f.version)}</b></span>
+    <span class="muted">· ${f.released ? "released " + fmtDate(f.released) : "as of " + fmtDate(f.date)}</span></div>`;
 }
 
 /* ---------- saved manuals ---------- */
@@ -175,7 +197,7 @@ function renderLibrary() {
     return `<div class="cat"><span class="label">${esc(cat)}</span>${devs.map(d => {
       const st = devState(d), size = d.docs.reduce((a, x) => a + (x.bytes || 0), 0);
       const btn = st === "empty" ? "" : (st === "saved" ? `<button class="btn" data-rm="${d.id}" type="button" ${busy ? "disabled" : ""}>Remove</button>` : `<button class="btn primary" data-sv="${d.id}" type="button" ${busy ? "disabled" : ""}>${st === "update" ? "Update" : "Save"} · ${fmtMB(size)}</button>`);
-      return `<div class="devcard"><div class="dhead"><div><h3>${esc(d.name)}</h3><div class="small muted">${esc(d.maker)} · ${esc(d.kind)}</div></div><span class="state ${cls[st]}">${label[st]}</span></div>
+      return `<div class="devcard"><div class="dhead"><div><h3>${esc(d.name)}</h3><div class="small muted">${esc(d.maker)} · ${esc(d.kind)}</div>${fwLine(d)}</div><span class="state ${cls[st]}">${label[st]}</span></div>
         ${d.docs.length ? `<div class="docs">${d.docs.map(x => `<button class="doc" data-open="${esc(x.file)}" type="button"><span class="t">${esc(x.title)} <span class="small muted">· ${esc(x.type)}</span>${revTag(x)}</span><span class="m">${x.pages || "?"} p · ${fmtMB(x.bytes || 0)}${saved.has(x.file) ? " ✓" : ""}</span></button>`).join("")}</div>` : `<div class="small muted">No manuals added for this device yet.</div>`}
         ${btn ? `<div class="row">${btn}</div>` : ""}</div>`;
     }).join("")}</div>`;
@@ -373,14 +395,22 @@ function renderFwBadge() { const n = fwNewCount(); $("#fwBadge").hidden = !n; $(
 function renderFirmware() {
   renderFwBadge();
   if (!FW || !FW.checked) {
-    $("#fwHead").innerHTML = `<div class="empty">No firmware report on this phone yet. It arrives with the next sync after the Mac runs its weekly check.</div>`;
-    $("#fwList").innerHTML = ""; $("#advList").innerHTML = ""; return;
+    $("#fwHead").innerHTML = `<div class="banner"><b>Weekly firmware check isn't running yet</b><span class="small">These versions were looked up by hand on the dates shown. Once the weekly check runs, this page updates on its own and flags new releases.</span></div>`;
+    $("#fwList").innerHTML = LIB.devices.map(d => { const f = latestFirmware(d); return `<div class="fw ${f ? "ok" : "none"}"><span class="bar"></span><div class="body">
+      <div class="row" style="justify-content:space-between"><h3>${esc(d.name)}</h3><span class="small" style="font-weight:700">${f ? "Latest known" : "Not checked yet"}</span></div>
+      ${f ? `<div class="ver">${esc(f.version)}</div><div class="small muted">${f.released ? "Released " + fmtDate(f.released) + " · " : ""}As of ${fmtDate(f.date)} · ${esc(f.from)}</div>` : ""}
+      ${f?.url ? `<a class="small" href="${esc(f.url)}" target="_blank" rel="noopener">Open source${navigator.onLine ? "" : " (needs internet)"}</a>` : ""}</div></div>`; }).join("");
+    $("#advList").innerHTML = `<div class="empty small">Security advisories appear here once the weekly check runs.</div>`; return;
   }
   const age = (Date.now() - new Date(FW.checked)) / DAY;
   $("#fwHead").innerHTML = `<div class="banner ${age > OLD_DAYS ? "bad" : age > STALE_DAYS ? "warn" : ""}"><span><b>Last checked ${ago(FW.checked)}</b> <span class="small muted">(${fmtDate(FW.checked)})</span></span>
     <span class="small">${age > STALE_DAYS ? "This report is old. The weekly check may have stopped running on the Mac, or this phone hasn't synced." : "A new firmware listing means it exists, not that it's approved. Updates go through the client before anyone installs them."}</span></div>`;
   const order = { new: 0, review: 1, error: 2, manual: 3, ok: 4, none: 5 };
-  const rows = LIB.devices.map(d => ({ d, f: FW.devices?.[d.id] || { status: "none" } })).sort((a, b) => order[a.f.status] - order[b.f.status]);
+  const rows = LIB.devices.map(d => {
+    let f = FW.devices?.[d.id] || { status: "none" };
+    if (!f.latest && d.firmware?.version) f = { ...f, latest: d.firmware.version, note: [f.note, `Latest known ${d.firmware.version} as of ${fmtDate(d.firmware.as_of)} (${d.firmware.source}).`].filter(Boolean).join(" ") };
+    return { d, f };
+  }).sort((a, b) => order[a.f.status] - order[b.f.status]);
   $("#fwList").innerHTML = rows.map(({ d, f }) => `<div class="fw ${f.status}"><span class="bar"></span><div class="body">
       <div class="row" style="justify-content:space-between"><h3>${esc(d.name)}</h3><span class="small" style="font-weight:700">${FW_LABEL[f.status] || esc(f.status)}</span></div>
       ${f.latest ? `<div class="ver">Latest listed: ${esc(f.latest)}${f.previous && f.previous !== f.latest ? ` <span class="muted">(was ${esc(f.previous)})</span>` : ""}</div>` : ""}
