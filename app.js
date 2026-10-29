@@ -109,12 +109,6 @@ function latestFirmware(d) {
   if (d.firmware?.version) return { version: d.firmware.version, date: d.firmware.as_of, released: d.firmware.released, isNew: false, from: d.firmware.source, url: d.firmware.url };
   return null;
 }
-function fwLine(d) {
-  const f = latestFirmware(d);
-  if (!f) return `<div class="fwline muted">Latest firmware: not checked yet</div>`;
-  return `<div class="fwline">${f.isNew ? `<span class="grade g-strong">New</span> ` : ""}Latest firmware <span class="mono"><b>${esc(f.version)}</b></span>
-    <span class="muted">· ${f.released ? "released " + fmtDate(f.released) : "as of " + fmtDate(f.date)}</span></div>`;
-}
 
 /* ---------- saved manuals ---------- */
 async function reconcileSaved() {
@@ -197,7 +191,7 @@ function renderLibrary() {
     return `<div class="cat"><span class="label">${esc(cat)}</span>${devs.map(d => {
       const st = devState(d), size = d.docs.reduce((a, x) => a + (x.bytes || 0), 0);
       const btn = st === "empty" ? "" : (st === "saved" ? `<button class="btn" data-rm="${d.id}" type="button" ${busy ? "disabled" : ""}>Remove</button>` : `<button class="btn primary" data-sv="${d.id}" type="button" ${busy ? "disabled" : ""}>${st === "update" ? "Update" : "Save"} · ${fmtMB(size)}</button>`);
-      return `<div class="devcard"><div class="dhead"><div><h3>${esc(d.name)}</h3><div class="small muted">${esc(d.maker)} · ${esc(d.kind)}</div>${fwLine(d)}</div><span class="state ${cls[st]}">${label[st]}</span></div>
+      return `<div class="devcard"><div class="dhead"><div><h3>${esc(d.name)}</h3><div class="small muted">${esc(d.maker)} · ${esc(d.kind)}</div></div><span class="state ${cls[st]}">${label[st]}</span></div>
         ${d.docs.length ? `<div class="docs">${d.docs.map(x => `<button class="doc" data-open="${esc(x.file)}" type="button"><span class="t">${esc(x.title)} <span class="small muted">· ${esc(x.type)}</span>${revTag(x)}</span><span class="m">${x.pages || "?"} p · ${fmtMB(x.bytes || 0)}${saved.has(x.file) ? " ✓" : ""}</span></button>`).join("")}</div>` : `<div class="small muted">No manuals added for this device yet.</div>`}
         ${btn ? `<div class="row">${btn}</div>` : ""}</div>`;
     }).join("")}</div>`;
@@ -394,32 +388,36 @@ function fwNewCount() {
 function renderFwBadge() { const n = fwNewCount(); $("#fwBadge").hidden = !n; $("#fwBadge").textContent = n; }
 function renderFirmware() {
   renderFwBadge();
-  if (!FW || !FW.checked) {
-    $("#fwHead").innerHTML = `<div class="banner"><b>Weekly firmware check isn't running yet</b><span class="small">These versions were looked up by hand on the dates shown. Once the weekly check runs, this page updates on its own and flags new releases.</span></div>`;
-    $("#fwList").innerHTML = LIB.devices.map(d => { const f = latestFirmware(d); return `<div class="fw ${f ? "ok" : "none"}"><span class="bar"></span><div class="body">
-      <div class="row" style="justify-content:space-between"><h3>${esc(d.name)}</h3><span class="small" style="font-weight:700">${f ? "Latest known" : "Not checked yet"}</span></div>
-      ${f ? `<div class="ver">${esc(f.version)}</div><div class="small muted">${f.released ? "Released " + fmtDate(f.released) + " · " : ""}As of ${fmtDate(f.date)} · ${esc(f.from)}</div>` : ""}
-      ${f?.url ? `<a class="small" href="${esc(f.url)}" target="_blank" rel="noopener">Open source${navigator.onLine ? "" : " (needs internet)"}</a>` : ""}</div></div>`; }).join("");
-    $("#advList").innerHTML = `<div class="empty small">Security advisories appear here once the weekly check runs.</div>`; return;
+  if (!LIB) return;
+  const hasReport = !!(FW && FW.checked);
+  if (!hasReport) {
+    $("#fwHead").innerHTML = `<div class="banner"><b>Weekly firmware check isn't running yet</b><span class="small">Versions below were looked up by hand on the dates shown. Once the weekly check runs, this page updates on its own and flags new releases.</span></div>`;
+  } else {
+    const age = (Date.now() - new Date(FW.checked)) / DAY;
+    $("#fwHead").innerHTML = `<div class="banner ${age > OLD_DAYS ? "bad" : age > STALE_DAYS ? "warn" : ""}"><span><b>Last checked ${ago(FW.checked)}</b> <span class="small muted">(${fmtDate(FW.checked)})</span></span>
+      <span class="small">${age > STALE_DAYS ? "This report is old. The weekly check may have stopped running on the Mac, or this phone hasn't synced." : "An update listed here means the manufacturer released it, not that it's approved. Updates go through the client before anyone installs them."}</span></div>`;
   }
-  const age = (Date.now() - new Date(FW.checked)) / DAY;
-  $("#fwHead").innerHTML = `<div class="banner ${age > OLD_DAYS ? "bad" : age > STALE_DAYS ? "warn" : ""}"><span><b>Last checked ${ago(FW.checked)}</b> <span class="small muted">(${fmtDate(FW.checked)})</span></span>
-    <span class="small">${age > STALE_DAYS ? "This report is old. The weekly check may have stopped running on the Mac, or this phone hasn't synced." : "A new firmware listing means it exists, not that it's approved. Updates go through the client before anyone installs them."}</span></div>`;
-  const order = { new: 0, review: 1, error: 2, manual: 3, ok: 4, none: 5 };
+  // One row per device: latest firmware, and a flag when a newer release was found.
+  const STATUS = { review: "Download page changed: check it", error: "Couldn't check", manual: "Check by hand" };
   const rows = LIB.devices.map(d => {
-    let f = FW.devices?.[d.id] || { status: "none" };
-    if (!f.latest && d.firmware?.version) f = { ...f, latest: d.firmware.version, note: [f.note, `Latest known ${d.firmware.version} as of ${fmtDate(d.firmware.as_of)} (${d.firmware.source}).`].filter(Boolean).join(" ") };
-    return { d, f };
-  }).sort((a, b) => order[a.f.status] - order[b.f.status]);
-  $("#fwList").innerHTML = rows.map(({ d, f }) => `<div class="fw ${f.status}"><span class="bar"></span><div class="body">
-      <div class="row" style="justify-content:space-between"><h3>${esc(d.name)}</h3><span class="small" style="font-weight:700">${FW_LABEL[f.status] || esc(f.status)}</span></div>
-      ${f.latest ? `<div class="ver">Latest listed: ${esc(f.latest)}${f.previous && f.previous !== f.latest ? ` <span class="muted">(was ${esc(f.previous)})</span>` : ""}</div>` : ""}
-      ${f.changed_on ? `<div class="small muted">Changed ${fmtDate(f.changed_on)}</div>` : ""}
-      ${f.note ? `<div class="small">${esc(f.note)}</div>` : ""}
-      ${f.url ? `<a class="small" href="${esc(f.url)}" target="_blank" rel="noopener">Open download page${navigator.onLine ? "" : " (needs internet)"}</a>` : ""}
+    const rep = FW?.devices?.[d.id] || {};
+    const f = latestFirmware(d);
+    const isNew = rep.status === "new";
+    const rank = isNew ? 0 : rep.status === "review" ? 1 : f ? 2 : 3;
+    return { d, rep, f, isNew, rank };
+  }).sort((a, b) => a.rank - b.rank);
+  $("#fwList").innerHTML = rows.map(({ d, rep, f, isNew }) => `<div class="fw ${isNew ? "new" : rep.status === "review" ? "review" : rep.status === "error" ? "error" : f ? "ok" : "none"}"><span class="bar"></span><div class="body">
+      <div class="fwname"><h3>${esc(d.name)}</h3>${isNew ? `<span class="fwalert">Firmware update available!</span>` : ""}</div>
+      <div class="small muted">${esc(d.maker)}</div>
+      ${f ? `<div class="fwver">Latest firmware: <span class="mono"><b>${esc(f.version)}</b></span>${isNew && rep.previous ? ` <span class="muted">(was <span class="mono">${esc(rep.previous)}</span>)</span>` : ""}</div>
+             <div class="small muted">${isNew && rep.changed_on ? "New release found " + fmtDate(rep.changed_on) : f.released ? "Released " + fmtDate(f.released) + " · as of " + fmtDate(f.date) : "As of " + fmtDate(f.date)}${f.from && f.from !== "weekly check" ? " · " + esc(f.from) : ""}</div>`
+          : `<div class="fwver muted">Latest firmware: not checked yet</div>`}
+      ${!isNew && STATUS[rep.status] ? `<div class="small"><b>${STATUS[rep.status]}.</b> ${esc(rep.note || "")}</div>` : ""}
+      ${(rep.url || f?.url) ? `<a class="small" href="${esc(rep.url || f.url)}" target="_blank" rel="noopener">${isNew ? "Release notes and download" : "Open source"}${navigator.onLine ? "" : " (needs internet)"}</a>` : ""}
     </div></div>`).join("");
-  const adv = FW.advisories || [];
-  $("#advList").innerHTML = adv.length ? adv.map(a => `<div class="adv"><b class="small">${esc(a.vendors?.join(", ") || "")}</b><span>${esc(a.title)}</span><span class="small muted">${a.published ? fmtDate(a.published) : ""} ${a.id ? "· " + esc(a.id) : ""}</span>${a.url ? `<a class="small" href="${esc(a.url)}" target="_blank" rel="noopener">Read advisory</a>` : ""}</div>`).join("")
+  const adv = FW?.advisories || [];
+  $("#advList").innerHTML = !hasReport ? `<div class="empty small">Security advisories appear here once the weekly check runs.</div>`
+    : adv.length ? adv.map(a => `<div class="adv"><b class="small">${esc(a.vendors?.join(", ") || "")}</b><span>${esc(a.title)}</span><span class="small muted">${a.published ? fmtDate(a.published) : ""} ${a.id ? "· " + esc(a.id) : ""}</span>${a.url ? `<a class="small" href="${esc(a.url)}" target="_blank" rel="noopener">Read advisory</a>` : ""}</div>`).join("")
     : `<div class="empty small">No recent CISA advisories for these manufacturers.</div>`;
 }
 
