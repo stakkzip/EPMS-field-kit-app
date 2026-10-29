@@ -1,6 +1,6 @@
 {
-  "name": "EPMS Field Manuals",
-  "short_name": "Field Manuals",
+  "name": "EPMS Field Kit",
+  "short_name": "Field Kit",
   "description": "Offline device manuals, search and firmware status for EPMS techs.",
   "start_url": "./",
   "scope": "./",
