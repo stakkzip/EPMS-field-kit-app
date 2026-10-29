@@ -1,0 +1,391 @@
+{
+ "categories": [
+  "Meters",
+  "Power quality",
+  "Gateways",
+  "Remote I/O",
+  "Event recorders",
+  "UPS",
+  "Breakers"
+ ],
+ "devices": [
+  {
+   "id": "pxm8000",
+   "name": "PXM 8000",
+   "maker": "Eaton",
+   "category": "Power quality",
+   "kind": "Power Xpert Meter 4000/6000/8000",
+   "docs": [
+    {
+     "file": "Eaton_PXM8000_UserManual_IM02601004E.pdf",
+     "title": "User and installation manual",
+     "type": "Manual",
+     "rev": "Undated (file Aug 2017)"
+    },
+    {
+     "file": "Eaton_PXM8000_ModbusMap_IB150014EN.pdf",
+     "title": "Modbus register map",
+     "type": "Registers",
+     "rev": "Mar 2017"
+    },
+    {
+     "file": "Eaton_PXM8000_QuickStart_IB02601007E.pdf",
+     "title": "Quick start guide",
+     "type": "Quick start",
+     "rev": "Jan 2017"
+    },
+    {
+     "file": "Eaton_PXM8000_BACnetObjects_IB150010EN.pdf",
+     "title": "BACnet object list",
+     "type": "Registers",
+     "rev": "May 2016"
+    },
+    {
+     "file": "Eaton_PXM8000_Obsolescence_Oct2024.pdf",
+     "title": "Obsolescence announcement",
+     "type": "Notice",
+     "rev": "Oct 2024"
+    }
+   ],
+   "aliases": [
+    "pxm 8000",
+    "pxm8k",
+    "pxm 4000",
+    "pxm 6000",
+    "pxm468k"
+   ]
+  },
+  {
+   "id": "pxm3000",
+   "name": "PXM 3000",
+   "maker": "Eaton",
+   "category": "Meters",
+   "kind": "Power Xpert Meter",
+   "docs": [
+    {
+     "file": "Eaton_PXM3000_UserManual_MN150012EN.pdf",
+     "title": "User manual",
+     "type": "Manual",
+     "rev": "Mar 2020"
+    }
+   ],
+   "aliases": [
+    "pxm3k"
+   ]
+  },
+  {
+   "id": "pxm1000",
+   "name": "PXM 1000",
+   "maker": "Eaton",
+   "category": "Meters",
+   "kind": "Power Xpert Meter",
+   "docs": [
+    {
+     "file": "Eaton_PXM1000_UserManual_MN150013EN.pdf",
+     "title": "User manual (Ethernet / multi-protocol)",
+     "type": "Manual",
+     "rev": "Dec 2023"
+    }
+   ],
+   "aliases": [
+    "pxm1k"
+   ]
+  },
+  {
+   "id": "pxq",
+   "name": "PXQ",
+   "maker": "Eaton",
+   "category": "Power quality",
+   "kind": "Power Xpert Quality event analysis system",
+   "docs": [
+    {
+     "file": "Eaton_PXQ_UserManual_MN150016EN.pdf",
+     "title": "User manual",
+     "type": "Manual",
+     "rev": "Jan 2026"
+    }
+   ],
+   "aliases": [
+    "power xpert quality"
+   ]
+  },
+  {
+   "id": "umg512",
+   "name": "UMG 512-PRO",
+   "maker": "Janitza",
+   "category": "Power quality",
+   "kind": "Class A power quality analyzer",
+   "docs": [
+    {
+     "file": "Janitza_UMG512PRO_GridVisConfigManual.pdf",
+     "title": "GridVis configuration manual",
+     "type": "Configuration",
+     "rev": "May 2022"
+    }
+   ],
+   "aliases": [
+    "umg512",
+    "umg 512"
+   ]
+  },
+  {
+   "id": "umg604",
+   "name": "UMG 604-PRO",
+   "maker": "Janitza",
+   "category": "Power quality",
+   "kind": "Power quality analyzer",
+   "docs": [
+    {
+     "file": "Janitza_UMG604PRO_UserManual.pdf",
+     "title": "User manual",
+     "type": "Manual",
+     "rev": "Feb 2026 \u00b7 for firmware 5.3.0"
+    }
+   ],
+   "aliases": [
+    "umg604",
+    "umg 604"
+   ]
+  },
+  {
+   "id": "umg801",
+   "name": "UMG 801",
+   "maker": "Janitza",
+   "category": "Meters",
+   "kind": "Modular power analyzer",
+   "docs": [
+    {
+     "file": "Janitza_UMG801_UserManual.pdf",
+     "title": "User manual",
+     "type": "Manual",
+     "rev": "Jul 2026 \u00b7 for firmware 1.7.3"
+    }
+   ],
+   "aliases": [
+    "umg801"
+   ]
+  },
+  {
+   "id": "hdpm6000",
+   "name": "PowerLogic HDPM6000",
+   "maker": "Schneider Electric",
+   "category": "Meters",
+   "kind": "High-density branch metering",
+   "docs": [],
+   "aliases": [
+    "hdpm",
+    "hdpm 6000"
+   ]
+  },
+  {
+   "id": "pxg900",
+   "name": "PXG 900",
+   "maker": "Eaton",
+   "category": "Gateways",
+   "kind": "Power Xpert Gateway",
+   "docs": [
+    {
+     "file": "Eaton_PXG900_UsersGuide.pdf",
+     "title": "User's guide",
+     "type": "Manual",
+     "rev": "Undated (file Jun 2021)"
+    },
+    {
+     "file": "Eaton_PXG900_AdvDisplay_QuickStart_TD150022EN.pdf",
+     "title": "Advanced display quick start",
+     "type": "Quick start",
+     "rev": "Oct 2017"
+    }
+   ],
+   "aliases": [
+    "pxg900"
+   ]
+  },
+  {
+   "id": "pxg1000",
+   "name": "PXG 1000",
+   "maker": "Eaton",
+   "category": "Gateways",
+   "kind": "Power Distribution Monitoring & Control gateway",
+   "docs": [
+    {
+     "file": "Eaton_PXG1000_PDMC_UserGuide_MN152258EN.pdf",
+     "title": "PDMC user guide",
+     "type": "Manual",
+     "rev": "Nov 2025"
+    }
+   ],
+   "aliases": [
+    "pxg1000",
+    "pdmc"
+   ]
+  },
+  {
+   "id": "moxa-e1210",
+   "name": "ioLogik E1210",
+   "maker": "Moxa",
+   "category": "Remote I/O",
+   "kind": "Ethernet remote I/O, 16 DI",
+   "docs": [
+    {
+     "file": "Moxa_ioLogikE1200_UserManual_v15.2.pdf",
+     "title": "ioLogik E1200 Series user manual",
+     "type": "Manual",
+     "rev": "Edition 15.2 \u00b7 Feb 2018"
+    }
+   ],
+   "aliases": [
+    "moxa",
+    "e1210",
+    "iologik"
+   ]
+  },
+  {
+   "id": "wago750",
+   "name": "WAGO 750-362",
+   "maker": "WAGO",
+   "category": "Remote I/O",
+   "kind": "Modbus TCP fieldbus coupler, G4",
+   "docs": [
+    {
+     "file": "WAGO_750-362_Manual.pdf",
+     "title": "750-362 coupler manual",
+     "type": "Manual",
+     "rev": "Version 1.1.1 \u00b7 2022"
+    }
+   ],
+   "aliases": [
+    "wago",
+    "750-362"
+   ]
+  },
+  {
+   "id": "axlf-bk-eth",
+   "name": "AXL F BK ETH",
+   "maker": "Phoenix Contact",
+   "category": "Remote I/O",
+   "kind": "Axioline F bus coupler",
+   "docs": [
+    {
+     "file": "Phoenix_AXLF_SystemInstall_7982.pdf",
+     "title": "Axioline F system and installation",
+     "type": "Manual",
+     "rev": "Rev 15 \u00b7 Oct 2025"
+    },
+    {
+     "file": "Phoenix_AXLF_Diagnostics_8663.pdf",
+     "title": "Axioline F diagnostics",
+     "type": "Troubleshooting",
+     "rev": "Rev 08 \u00b7 Nov 2024"
+    }
+   ],
+   "aliases": [
+    "phoenix",
+    "axioline",
+    "axl f",
+    "axl"
+   ]
+  },
+  {
+   "id": "ser3200",
+   "name": "SER-3200",
+   "maker": "Cyber Sciences",
+   "category": "Event recorders",
+   "kind": "CyTime sequence of events recorder",
+   "docs": [
+    {
+     "file": "CyberSciences_SER3200_UsersGuide_IB-SER-01.pdf",
+     "title": "User's guide IB-SER-01",
+     "type": "Manual",
+     "rev": "Apr 2022"
+    }
+   ],
+   "aliases": [
+    "ser",
+    "cytime",
+    "cyber sciences"
+   ]
+  },
+  {
+   "id": "93pm",
+   "name": "93PM UPS",
+   "maker": "Eaton",
+   "category": "UPS",
+   "kind": "UPS communications card",
+   "docs": [
+    {
+     "file": "Eaton_93PM_PXGMinislotCard_UserGuide.pdf",
+     "title": "Power Xpert Gateway minislot card",
+     "type": "Manual",
+     "rev": "Rev 5 \u00b7 2020"
+    }
+   ],
+   "aliases": [
+    "93pm",
+    "ups",
+    "minislot"
+   ]
+  },
+  {
+   "id": "pxr",
+   "name": "PXR 20/25/35 trip unit",
+   "maker": "Eaton",
+   "category": "Breakers",
+   "kind": "Power Xpert Release trip unit for Magnum PXR and Power Defense SB breakers",
+   "aliases": [
+    "pxr",
+    "pxr20",
+    "pxr 20",
+    "pxr25",
+    "pxr 25",
+    "pxr35",
+    "pxr 35",
+    "magnum",
+    "magnum pxr",
+    "power defense",
+    "trip unit"
+   ],
+   "docs": [
+    {
+     "file": "Eaton_PXR20-25-35_TripUnit_UserManual_MN013015EN.pdf",
+     "title": "PXR 20/25/35 user manual",
+     "type": "Manual",
+     "rev": "Jan 2026"
+    }
+   ]
+  },
+  {
+   "id": "emax2",
+   "name": "Emax 2 / Ekip",
+   "maker": "ABB",
+   "category": "Breakers",
+   "kind": "SACE Emax 2 air circuit breakers E1.2\u2013E6.2, Ekip trip units and communication modules",
+   "aliases": [
+    "emax",
+    "emax 2",
+    "emax2",
+    "sace",
+    "e1.2",
+    "e2.2",
+    "e4.2",
+    "e6.2",
+    "ekip",
+    "ekip com",
+    "ekip touch",
+    "ekip hi-touch",
+    "ekip dip",
+    "ekip link",
+    "ekip connect",
+    "abb"
+   ],
+   "docs": [
+    {
+     "file": "ABB_Emax2_E1.2-E6.2_DesignEngineer_1SDH001330R0002.pdf",
+     "title": "Operating instructions for the design engineer",
+     "type": "Manual",
+     "rev": "Rev. B \u00b7 2018"
+    }
+   ]
+  }
+ ]
+}
